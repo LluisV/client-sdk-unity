@@ -32,8 +32,8 @@ namespace LiveKit
         /// </remarks>
         public abstract event Action<float[], int, int> AudioRead;
 
-#if UNITY_IOS && !UNITY_EDITOR
-        // iOS microphone sample rate is 24k
+#if (UNITY_IOS || (UNITY_ANDROID && UNITY_6000_0_OR_NEWER)) && !UNITY_EDITOR
+        // iOS/Android(Unity 6000+) microphone sample rate is 24k
         public static uint DefaultMicrophoneSampleRate = 24000;
 
         public static uint DefaultSampleRate = 48000;
@@ -60,19 +60,16 @@ namespace LiveKit
         private bool _started = false;
         private bool _disposed = false;
 
-        protected RtcAudioSource(int channels = 2, RtcAudioSourceType audioSourceType = RtcAudioSourceType.AudioSourceCustom, uint? sampleRate = null)
+        protected RtcAudioSource(int channels = 2, RtcAudioSourceType audioSourceType = RtcAudioSourceType.AudioSourceCustom)
         {
             _sourceType = audioSourceType;
-
-            // Use provided sample rate, or fall back to defaults
-            uint actualSampleRate = sampleRate ?? 
-                (_sourceType == RtcAudioSourceType.AudioSourceMicrophone ? DefaultMicrophoneSampleRate : DefaultSampleRate);
 
             using var request = FFIBridge.Instance.NewRequest<NewAudioSourceRequest>();
             var newAudioSource = request.request;
             newAudioSource.Type = AudioSourceType.AudioSourceNative;
             newAudioSource.NumChannels = (uint)channels;
-            newAudioSource.SampleRate = actualSampleRate;
+            newAudioSource.SampleRate = _sourceType == RtcAudioSourceType.AudioSourceMicrophone ?
+                DefaultMicrophoneSampleRate : DefaultSampleRate;
 
             UnityEngine.Debug.Log($"NewAudioSource: {newAudioSource.NumChannels} {newAudioSource.SampleRate}");
 
